@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+import typing as T
+
+from enum import Enum
+
+
+class PkgConfigLine:
+    """
+    A single line in the pkg-config file
+    """
+
+    class EntryType(Enum):
+        unknown = -1
+        variable = 0
+        entry = 1
+
+    _lineno: int
+    _key: str
+    _value: str
+    _type: EntryType
+
+    def __init__(self, lineno: int, line: str):
+        """ Create any type of line """
+        self._lineno = lineno
+        if not line:
+            self._type = self.EntryType.unknown
+            self._key = ''
+            self._value = ''
+            return
+
+        delimiter = ':'
+        # god dam'it if we have a version requirement this will break.
+        if delimiter in line:
+            self._type = self.EntryType.entry
+        else:
+            self._type = self.EntryType.variable
+            delimiter = '='
+
+        pair = line.split(delimiter, 1)
+        self._key = pair[0].strip()
+        self._value = pair[1].strip()
+
+    def __str__(self) -> str:
+        match self._type:
+            case self.EntryType.unknown:
+                return ''
+            case self.EntryType.variable:
+                return f'{self._key} = {self._value}'
+            case self.EntryType.entry:
+                return f'{self._key}: {self._value}'
+
+    def line_number(self) -> int:
+        return self._lineno
+
+    def _is_entry(self) -> bool:
+        return self._type == self.EntryType.entry
+
+    def is_requires(self) -> bool:
+        return self._is_entry() and self._key.startswith('Requires')
+
+    def is_libs(self) -> bool:
+        return self._is_entry() and self._key.startswith('Libs')
+
+    def is_private(self) -> bool:
+        return self._is_entry() and self._key.endswith('.private')
+
+    def key(self) -> str:
+        return self._key
+
+    def value(self) -> str:
+        return self._value
+
+    def changeValue(self, val: str):
+        self._value = val
+
+    def clear(self):
+        self._type = self.EntryType.unknown
+        self._key = ''
+        self._value = ''
+
+    def remove_rpath(self):
+        if self._type != self.EntryType.entry:
+            return
+        if not self._key.startswith('Lib'):
+            return
+        if "rpath" in self._value:
+            self._value = self._remove_word_from(self._value, "rpath")
+
+    @staticmethod
+    def _remove_word_from(line: str, bad: str) -> str:
+        return ' '.join([word for word in line.split() if bad not in word])
+
+
+class PkgConfigFile:
+    """
+    Collection of all lines in the file
+    """
+    _filename: str
+    _entries: T.List[PkgConfigLine]
+    _verbose: bool = False
+
+    def __init__(self, filename: str):
+        """
+        :type filename: The name of the pkg-config file
+        """
+        self._filename = filename
+        self._entries = []
+
+    def append(self, lineno: int, line: str):
+        l = PkgConfigLine(lineno, line)
+        if self._verbose:
+            print(f'+ {l.line_number()} \t {l.key()} => {l.value()}')
+        self._entries.append(l)
+
+    def __iter__(self):
+        return iter(self._entries)
+
+    def merge_private(self):
+        """ Merge the private entry into the corresponding non-private one """
+        # only Requires and Libs are allowed to have a .private version
+        # so we first look out for these lines
+        requires: T.List[int] = []
+        libs: T.List[int] = []
+        for entry in self._entries:
+            if entry.is_requires():
+                requires.append(entry.line_number())
+            if entry.is_libs():
+                libs.append(entry.line_number())
+        # check if we have at least two lines if so, start the merge
+        # but since we start our line-number with 1, whe have to use
+        # -1 to get the correct entry!
+        if len(requires) == 2:
+            self._merge_lines(requires[0]-1, requires[1]-1)
+        if len(libs) == 2:
+            self._merge_lines(libs[0]-1, libs[1]-1)
+
+    def _merge_lines(self, first: int, second: int):
+        a = self._entries[first]
+        b = self._entries[second]
+
+        key: str = ''
+        val: str = ''
+
+        if a.is_private():
+            key = b.key()
+            val = b.value() + ', ' + a.value()
+        else:
+            key = a.key()
+            val = a.value() + ', ' + b.value()
+
+        self._entries[first].changeValue(val)
+        self._entries[second].clear()
+
+    def remove_rpath(self):
+        for e in self._entries:
+            e.remove_rpath()
+
+    def write(self, inplace: bool):
+        target = sys.stdout
+        if inplace:
+            target = open(self._filename, 'w')
+        for e in self._entries:
+            print(e, file=target)
+        if inplace:
+            target.close();
+
+def mangle(file, merge: bool, rpath: bool, inplace: bool) -> int:
+    pkg = PkgConfigFile(file)
+    with open(file, 'r') as f:
+        for line_num, line in enumerate(f, 1):
+            pkg.append(line_num, line.strip())
+
+    if merge:
+        pkg.merge_private()
+    if rpath:
+        pkg.remove_rpath()
+
+    pkg.write(inplace)
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description='Mangle pkg-config files')
+    parser.add_argument('-m', '--merge-private', action='store_true', help='Merge private section into non-private',
+                        default=False)
+    parser.add_argument('-r', '--remove-rpath', action='store_true', help='Remove rpath entries',
+                        default=False)
+    parser.add_argument('-i', '--inplace', action='store_true', help='Modify file inplace', default=False)
+    parser.add_argument('filename', type=argparse.FileType('r'), help='The pkg-config file to mangle')
+
+    args = parser.parse_args()
+    if not args.filename:
+        parser.print_usage()
+        return sys.exit(-1)
+
+    return mangle(args.filename.name, args.merge_private, args.remove_rpath, args.inplace)
+
+
+if __name__ == '__main__':
+    sys.exit(main())
