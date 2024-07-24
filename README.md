@@ -10,3 +10,9 @@ Well this may include dependencies, especially from system libraries, which you 
 The idea here is, copy the libraries you need to a different location, modify them, and then use them instead of the
 originals. Of course this is not the way one should do things, but sometimes taking a shortcut is the fastest way to
 go...
+
+## Usage
+
+```bash
+$ for f in $(ls); do pkgmangle -m -r -i $f; done
+```
