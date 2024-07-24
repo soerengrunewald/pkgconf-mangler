@@ -76,6 +76,9 @@ class PkgConfigLine:
     def changeValue(self, val: str):
         self._value = val
 
+    def changeKey(self, key: str):
+        self._key = key
+
     def clear(self):
         self._type = self.EntryType.unknown
         self._key = ''
@@ -129,13 +132,22 @@ class PkgConfigFile:
                 requires.append(entry.line_number())
             if entry.is_libs():
                 libs.append(entry.line_number())
+
+
+
         # check if we have at least two lines if so, start the merge
         # but since we start our line-number with 1, whe have to use
         # -1 to get the correct entry!
         if len(requires) == 2:
             self._merge_lines(requires[0]-1, requires[1]-1)
+        elif len(requires) == 1:
+            self._unprivate(requires[0]-1)
+
         if len(libs) == 2:
             self._merge_lines(libs[0]-1, libs[1]-1)
+        elif len(libs) == 1:
+            self._unprivate(libs[0]-1)
+
 
     def _merge_lines(self, first: int, second: int):
         a = self._entries[first]
@@ -153,6 +165,13 @@ class PkgConfigFile:
 
         self._entries[first].changeValue(val)
         self._entries[second].clear()
+
+    def _unprivate(self, first: int):
+        a = self._entries[first]
+        if not a.is_private():
+            return
+        # just remove .private from the key
+        self._entries[first].changeKey(a.key().split('.')[0])
 
     def remove_rpath(self):
         for e in self._entries:
