@@ -155,13 +155,17 @@ class PkgConfigFile:
 
         key: str = ''
         val: str = ''
+        sep: str = ' '
+
+        if a.is_requires():
+            sep = ', '
 
         if a.is_private():
             key = b.key()
-            val = b.value() + ', ' + a.value()
+            val = b.value() + sep + a.value()
         else:
             key = a.key()
-            val = a.value() + ' ' + b.value()
+            val = a.value() + sep + b.value()
 
         self._entries[first].changeValue(val)
         self._entries[second].clear()
