@@ -149,7 +149,7 @@ class PkgConfigFile:
             val = b.value() + ', ' + a.value()
         else:
             key = a.key()
-            val = a.value() + ', ' + b.value()
+            val = a.value() + ' ' + b.value()
 
         self._entries[first].changeValue(val)
         self._entries[second].clear()
