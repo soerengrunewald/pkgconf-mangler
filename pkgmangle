@@ -105,12 +105,13 @@ class PkgConfigFile:
     _entries: T.List[PkgConfigLine]
     _verbose: bool = False
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, verbose: bool):
         """
         :type filename: The name of the pkg-config file
         """
         self._filename = filename
         self._entries = []
+        self._verbose = verbose
 
     def append(self, lineno: int, line: str):
         l = PkgConfigLine(lineno, line)
@@ -190,9 +191,11 @@ class PkgConfigFile:
         if inplace:
             target.close();
 
-def mangle(file, merge: bool, rpath: bool, inplace: bool) -> int:
-    pkg = PkgConfigFile(file)
+def mangle(file, merge: bool, rpath: bool, inplace: bool, verbose: bool) -> int:
+    pkg = PkgConfigFile(file, verbose)
     with open(file, 'r') as f:
+        if verbose:
+            print(f'Processing {file}...')
         for line_num, line in enumerate(f, 1):
             pkg.append(line_num, line.strip())
 
@@ -212,6 +215,7 @@ def main() -> int:
     parser.add_argument('-r', '--remove-rpath', action='store_true', help='Remove rpath entries',
                         default=False)
     parser.add_argument('-i', '--inplace', action='store_true', help='Modify file inplace', default=False)
+    parser.add_argument('-v', '--verbose', action='store_true', help='Drop some debug messages along the way', default=False)
     parser.add_argument('filename', type=argparse.FileType('r'), help='The pkg-config file to mangle')
 
     args = parser.parse_args()
@@ -219,7 +223,7 @@ def main() -> int:
         parser.print_usage()
         return sys.exit(-1)
 
-    return mangle(args.filename.name, args.merge_private, args.remove_rpath, args.inplace)
+    return mangle(args.filename.name, args.merge_private, args.remove_rpath, args.inplace, args.verbose)
 
 
 if __name__ == '__main__':
