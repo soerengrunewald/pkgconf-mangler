@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 
-using KeyValue = std::map<std::string, std::string>;
 
 namespace {
 
@@ -70,6 +69,7 @@ namespace {
     }
 
 
+    template<typename KeyValue>
     void parse_line(std::string const& line, KeyValue& paths, KeyValue& options)
     {
         auto const first_seperator = line.find_first_of("=:");
@@ -88,6 +88,7 @@ namespace {
     }
 
 
+    template<typename KeyValue>
     void merge_private(KeyValue& compiler_options)
     {
         auto iter = compiler_options.begin();
@@ -110,6 +111,7 @@ namespace {
     }
 
 
+    template<typename KeyValue>
     void remove_rpath(KeyValue& compiler_options)
     {
         for (auto& entry : compiler_options) {
@@ -131,6 +133,7 @@ namespace {
     }
 
 
+    template<typename KeyValue>
     void dump(std::ostream& out, KeyValue const& paths, KeyValue const& compiler)
     {
         for (auto const& e : paths)
@@ -143,7 +146,7 @@ namespace {
     }
 
 
-    [[maybe_unused]]
+    template<typename KeyValue>
     void write_to_file(std::string const& filename, KeyValue const& paths, KeyValue const& compiler)
     {
         std::ofstream out(filename);
