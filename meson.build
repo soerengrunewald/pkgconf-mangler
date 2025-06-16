@@ -5,7 +5,9 @@ project(
     version : '1.0',
     default_options: [
         'cpp_std=c++17',
+        'buildtype=debugoptimized',
         'default_library=static',
+        'b_lto=true',
     ]
 )
 executable(meson.project_name(), 'main.cc', link_args: ['-static'])
