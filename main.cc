@@ -134,22 +134,23 @@ namespace {
 
 
     template<typename KeyValue>
-    void dump(std::ostream& out, KeyValue const& paths, KeyValue const& compiler)
+    void dump(std::ostream& out, KeyValue const& container, std::string_view seperator)
     {
         // reverse the order, so we get the same output as input was
-        std::vector<std::pair<std::string, std::string>> p(paths.begin(), paths.end());
-        std::reverse(p.begin(), p.end());
+        std::vector<std::pair<std::string, std::string>> rev(container.begin(), container.end());
+        std::reverse(rev.begin(), rev.end());
 
-        for (auto const& e : p)
-            out << e.first << "=" << e.second << "\n";
+        for (auto const& e : rev)
+            out << e.first << seperator << e.second << "\n";
+    }
 
+
+    template<typename KeyValue>
+    void dump(std::ostream& out, KeyValue const& paths, KeyValue const& compiler)
+    {
+        dump(out, paths, "=");
         out << "\n";
-
-        std::vector<std::pair<std::string, std::string>> c(compiler.begin(), compiler.end());
-        std::reverse(c.begin(), c.end());
-
-        for (auto const& e : c)
-            out << e.first << ": " << e.second << "\n";
+        dump(out, compiler, ": ");
     }
 
 
