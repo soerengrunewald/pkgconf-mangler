@@ -1,11 +1,11 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -136,12 +136,19 @@ namespace {
     template<typename KeyValue>
     void dump(std::ostream& out, KeyValue const& paths, KeyValue const& compiler)
     {
-        for (auto const& e : paths)
+        // reverse the order, so we get the same output as input was
+        std::vector<std::pair<std::string, std::string>> p(paths.begin(), paths.end());
+        std::reverse(p.begin(), p.end());
+
+        for (auto const& e : p)
             out << e.first << "=" << e.second << "\n";
 
         out << "\n";
 
-        for (auto const& e : compiler)
+        std::vector<std::pair<std::string, std::string>> c(compiler.begin(), compiler.end());
+        std::reverse(c.begin(), c.end());
+
+        for (auto const& e : c)
             out << e.first << ": " << e.second << "\n";
     }
 
@@ -198,8 +205,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    std::map<std::string, std::string> pathEntries;
-    std::map<std::string, std::string> compilerEntries;
+    std::unordered_map<std::string, std::string> pathEntries;
+    std::unordered_map<std::string, std::string> compilerEntries;
     std::string line;
 
     while (std::getline(input, line)) {
