@@ -117,6 +117,7 @@ namespace {
         for (auto& entry : compiler_options) {
             if (not starts_with(entry.first, "Libs"))
                 continue;
+
             auto const& args = entry.second;
             auto const rpath_pos = args.find("rpath");
             if (rpath_pos == std::string::npos)
@@ -126,7 +127,8 @@ namespace {
             auto const rpath_end = args.find_first_of(' ', rpath_pos);
 
             auto const pre_rpath = args.substr(0, rpath_start);
-            auto const post_rpath = args.substr(rpath_end);
+            // substr(npos) will segfault
+            auto const post_rpath = ((rpath_end == std::string::npos) ? "" : args.substr(rpath_end));
 
             entry.second = pre_rpath + post_rpath;
         }
