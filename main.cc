@@ -99,13 +99,16 @@ namespace {
                 continue;
             }
 
+            // we have an .private entry, so we search for the non-private
             auto const base_key = iter->first.substr(0, private_pos);
-            auto non_private= compiler_options.find(base_key);
-
-            if (non_private != compiler_options.end()) {
+            auto non_private = compiler_options.find(base_key);
+            // did we find one, then append
+            if (non_private != compiler_options.end())
                 non_private->second += " " + iter->second;
-                iter = compiler_options.erase(iter);
-            }
+            else // otherwise we have to create a new entry
+                compiler_options[base_key] = iter->second;
+            // in any case we delete the private entry
+            iter = compiler_options.erase(iter);
             ++iter;
         }
     }
