@@ -1,4 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+
 #include <algorithm>
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -12,10 +15,27 @@
 
 namespace {
 
+    /**
+     * This simplifies the usage of std::array, as one does not have
+     * to specifiy the array size:
+     * <code>
+     * -  auto const foo = std::array<std::string, 3>{{"foo", "bar", "baz"}};
+     * +  auto const foo = gul14::array_of<std::string>("foo", "bar", "baz");
+     * </code>
+     * \Note: This is taken from DXVK project, authored by Joshua Ashton
+     */
+    template <typename V, typename... T>
+    constexpr std::array<V, sizeof...(T)> array_of(T&&... t) {
+           return {{ std::forward<T>(t)... }};
+    }
 
-    template<typename T>
-    bool contains(std::vector<T> const& list, T const& entry) {
-        return std::find(list.begin(), list.end(), entry) != std::end(list);
+
+    /**
+     * Test if a container contains a specfic entry
+     */
+    template<typename ContainerType>
+    bool contains(const ContainerType& c, const std::string& item) {
+        return std::find(c.begin(), c.end(), item) != c.end();
     }
 
 
@@ -27,7 +47,6 @@ namespace {
     inline bool starts_with(std::string const& s, std::string_view const& what) {
         return s.find(what) != std::string::npos;
     }
-
 
 
     [[maybe_unused]]
@@ -141,12 +160,22 @@ namespace {
     template<typename KeyValue>
     void dump(std::ostream& out, KeyValue const& container, std::string_view seperator)
     {
-        // reverse the order, so we get the same output as input was
-        std::vector<std::pair<std::string, std::string>> rev(container.begin(), container.end());
-        std::reverse(rev.begin(), rev.end());
+        static auto const sorted_keys = array_of<std::string>(
+            "prefix", "bindir", "includedir", "libdir",
+            "Name", "Description", "URL", "Version", "Requires", "Conflicts", "Cflags", "Libs"
+        );
 
-        for (auto const& e : rev)
-            out << e.first << seperator << e.second << "\n";
+        // first dump everything sorted that should be sorted
+        for (auto const& key : sorted_keys) {
+            if (auto const entry = container.find(key); entry != container.end())
+                out << key << seperator << entry->second << "\n";
+        }
+
+        // then everything else
+        for (const auto& pair : container) {
+            if (not contains(sorted_keys, pair.first))
+                out << pair.first << seperator << pair.second << "\n";
+        }
     }
 
 
